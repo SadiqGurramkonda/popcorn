@@ -59,14 +59,21 @@ const MOVIE = "Gabbar Singh"
 
 export function App() {
 
-  const [query, setQuery] = useState("Interstellar");
+  const [query, setQuery] = useState("Gabbar Singh");
 
   const [movies, setMovies] = useState([]);
-  const [watched, setWatched] = useState([]);
   const [isLoading,setIsLoading] = useState(false);
   const [erorr, setError] = useState("");
   const [selectedId, setSelectedId] = useState(null);
+  // const [watched, setWatched] = useState([]);
 
+  //setting the initial state using a function
+  const [watched, setWatched] = useState(function(){
+    const storedData = JSON.parse(localStorage.getItem("watched"));
+    return storedData
+
+  });
+  
   function handleSelectMovie(id){
     setSelectedId((prevId)=>id===prevId?null:id);
   }
@@ -86,7 +93,12 @@ export function App() {
 
 
 
-  
+  useEffect(
+    function () {
+      localStorage.setItem("watched", JSON.stringify(watched));
+    },
+    [watched]
+  );
 
 
   //way to use async function inside of an useEffect hook:
@@ -137,7 +149,7 @@ export function App() {
         <Box>
           {erorr && <ErrorMessage error={erorr}></ErrorMessage>}
           {!isLoading && !erorr && <MovieList  movies={movies} onSelectMovie={handleSelectMovie}  />}
-          {isLoading && <div>loading... </div>}
+          {isLoading && <Loader />}
         </Box>
         <Box>
           {selectedId?<MovieDetails 
@@ -164,6 +176,14 @@ function ErrorMessage({error}){
   return(
     <div className='error'>
       {error}
+    </div>
+  )
+}
+
+function Loader(){
+  return(
+    <div className='loader'>
+      loading...
     </div>
   )
 }
@@ -316,6 +336,11 @@ function MovieDetails({selectedId , onCloseMovie, onAddWatched,watched}){
 
 
 
+// shoudn't call a Hook conditionally
+  // if(imdbRating>8) [isTop, setIsTop] = useState(true);
+
+
+// const [avgRating, setAvgRating] = useState(0);
 
   function handleAdd(){
     const newWatachedMovie = {
@@ -329,6 +354,10 @@ function MovieDetails({selectedId , onCloseMovie, onAddWatched,watched}){
     };
 
     onAddWatched(newWatachedMovie);
+
+    //an example, using the state right after setting it!
+    // setAvgRating(Number(imdbRating))
+    // setAvgRating((avgRating)=>(avgRating+userRating) / 2)
     onCloseMovie();
   }
 
@@ -371,9 +400,12 @@ function MovieDetails({selectedId , onCloseMovie, onAddWatched,watched}){
     //   document.removeEventListener("keydown",callback);
     // }
   })
+
+
+  
   return(
     <div className='details'>
-      {isLoading?<div>loading...</div>:
+      {isLoading?<Loader/>:
       <>
       <header>
       <button className='btn-back' onClick={onCloseMovie}>&larr;</button>
@@ -390,6 +422,7 @@ function MovieDetails({selectedId , onCloseMovie, onAddWatched,watched}){
       </div>
       </header>
       <section>
+      {/* <p>{avgRating}</p> */}
         <div className="rating">
           {!isWatched?
           <><StarRating size={20} maxStarRating={10} color='gold' onSetRating={setUserRating} />
