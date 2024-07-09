@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import StarRating from './StarRating';
 import Challenge1 from './Challenge';
 import './App.css'
+import { useMovies } from './useMovies';
+import { useLocalStorageState } from './useLocalStorage';
 
 const tempMovieData = [
   {
@@ -60,19 +62,22 @@ const MOVIE = "Gabbar Singh"
 export function App() {
 
   const [query, setQuery] = useState("Gabbar Singh");
-
-  const [movies, setMovies] = useState([]);
-  const [isLoading,setIsLoading] = useState(false);
-  const [erorr, setError] = useState("");
   const [selectedId, setSelectedId] = useState(null);
+
+  //from custom hook useMovies:
+  const {movies,isLoading,error} = useMovies(query,handleCloseMovie);
   // const [watched, setWatched] = useState([]);
 
-  //setting the initial state using a function
-  const [watched, setWatched] = useState(function(){
-    const storedData = JSON.parse(localStorage.getItem("watched"));
-    return storedData
+  const [watched, setWatched] = useLocalStorageState([],"watched");
 
-  });
+
+
+  // setting the initial state using a function
+  // const [watched, setWatched] = useState(function(){
+  //   const storedData = JSON.parse(localStorage.getItem("watched"));
+  //   return storedData
+
+  // });
   
   function handleSelectMovie(id){
     setSelectedId((prevId)=>id===prevId?null:id);
@@ -93,51 +98,10 @@ export function App() {
 
 
 
-  useEffect(
-    function () {
-      localStorage.setItem("watched", JSON.stringify(watched));
-    },
-    [watched]
-  );
+  
 
 
   //way to use async function inside of an useEffect hook:
-
-  useEffect(function () {
-    const controller = new AbortController();
-
-    async function fetchMovies() {
-      try {
-        setError("");
-        setIsLoading(true);
-        const res = await fetch(
-          `https://www.omdbapi.com/?apikey=61879b62&s=${query}`,
-          {signal:controller.signal}
-        );
-        if (!res.ok)
-          {throw new Error("Something went wrong, couldn't fetch movies")};
-        const data = await res.json();
-        if(data["Response"] === "False"){
-          throw new Error("couldn't find the movie...");
-        }
-        setMovies(data.Search);
-        setError("")
-      } catch (err) {
-        if(err.name !== "AbortError")
-        setError(err.message); 
-      }
-      finally{
-        setIsLoading(false);
-      }
-    }
-
-    fetchMovies();
-
-    return function(){
-      controller.abort()
-    }
-
-  },[query]);
   
   return (
     <>
@@ -147,8 +111,8 @@ export function App() {
       </Navbar>
       <Main>
         <Box>
-          {erorr && <ErrorMessage error={erorr}></ErrorMessage>}
-          {!isLoading && !erorr && <MovieList  movies={movies} onSelectMovie={handleSelectMovie}  />}
+          {error && <ErrorMessage error={error}></ErrorMessage>}
+          {!isLoading && !error && <MovieList  movies={movies} onSelectMovie={handleSelectMovie}  />}
           {isLoading && <Loader />}
         </Box>
         <Box>
@@ -211,9 +175,30 @@ function Logo(){
 
 function SearchBar({query,setQuery}){
 
+  const SearchBarRef = useRef(null);
+  
+
+  useEffect(function(){
+
+    function callback(e) {
+      if(document.activeElement === SearchBarRef.current) {
+        return;
+      }
+      if (e.code === "Enter") {
+        SearchBarRef.current.focus();
+        setQuery("");
+      }
+    }
+    document.addEventListener("keydown", callback);
+
+    return function () {
+      document.removeEventListener("keydown", callback);
+    };
+  },[setQuery])
+
 
   return(
-    <input
+    <input ref={SearchBarRef}
           className="search"
           type="text"
           placeholder="Search movies..."
@@ -318,6 +303,14 @@ function MovieDetails({selectedId , onCloseMovie, onAddWatched,watched}){
 
   const [userRating, setUserRating] = useState(0);
 
+  const countRef = useRef(0);
+
+  useEffect(()=>{
+    if(userRating){
+      countRef.current++;
+    }
+  },[userRating]);
+
   const {
     Title: title,
     Year: year,
@@ -350,7 +343,8 @@ function MovieDetails({selectedId , onCloseMovie, onAddWatched,watched}){
       poster,
       imdbRating: Number(imdbRating),
       runtime: Number(runtime.split(" ").at(0)),
-      userRating
+      userRating,
+      countUserRatingDecisions: countRef.current
     };
 
     onAddWatched(newWatachedMovie);
@@ -396,9 +390,9 @@ function MovieDetails({selectedId , onCloseMovie, onAddWatched,watched}){
     }
     document.addEventListener("keydown",callback);
 
-    // return function(){
-    //   document.removeEventListener("keydown",callback);
-    // }
+    return function(){
+      document.removeEventListener("keydown",callback);
+    }
   })
 
 
