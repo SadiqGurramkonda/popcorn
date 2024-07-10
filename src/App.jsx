@@ -4,6 +4,7 @@ import Challenge1 from './Challenge';
 import './App.css'
 import { useMovies } from './useMovies';
 import { useLocalStorageState } from './useLocalStorage';
+import { useKey } from './useKey';
 
 const tempMovieData = [
   {
@@ -176,25 +177,34 @@ function Logo(){
 function SearchBar({query,setQuery}){
 
   const SearchBarRef = useRef(null);
+
+  useKey("Enter",function(){
+    if(document.activeElement === SearchBarRef.current) {
+      return;
+    }
+    SearchBarRef.current.focus();
+    setQuery("");
+  })
   
 
-  useEffect(function(){
+  // useEffect(function(){
 
-    function callback(e) {
-      if(document.activeElement === SearchBarRef.current) {
-        return;
-      }
-      if (e.code === "Enter") {
-        SearchBarRef.current.focus();
-        setQuery("");
-      }
-    }
-    document.addEventListener("keydown", callback);
+  //   function callback(e) {
+      
+  //     if (e.code === "Enter") {
+  //       if(document.activeElement === SearchBarRef.current) {
+  //         return;
+  //       }
+  //       SearchBarRef.current.focus();
+  //       setQuery("");
+  //     }
+  //   }
+  //   document.addEventListener("keydown", callback);
 
-    return function () {
-      document.removeEventListener("keydown", callback);
-    };
-  },[setQuery])
+  //   return function () {
+  //     document.removeEventListener("keydown", callback);
+  //   };
+  // },[setQuery])
 
 
   return(
@@ -378,24 +388,9 @@ function MovieDetails({selectedId , onCloseMovie, onAddWatched,watched}){
     return ()=>{
       document.title = "Popcorn"
     }
-  },[title])
+  },[title]);
 
-  useEffect(function(){
-
-    function callback(e){
-      if(e.code ==="Escape"){
-        onCloseMovie();
-        console.log("CLOSING")
-      }
-    }
-    document.addEventListener("keydown",callback);
-
-    return function(){
-      document.removeEventListener("keydown",callback);
-    }
-  })
-
-
+  useKey("Escape",onCloseMovie)
   
   return(
     <div className='details'>
